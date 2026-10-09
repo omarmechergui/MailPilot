@@ -1,0 +1,12 @@
+// Prisma schema for MailPilot
+// Database: MongoDB Atlas via Prisma MongoDB connector
+// See docs/database-design.md for the full logical model
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
