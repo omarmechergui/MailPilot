@@ -28,9 +28,21 @@ app.use(express.json({ limit: '2mb' }));
 // Parse cookies
 app.use(cookieParser());
 
+import authRoutes from './routes/auth.routes.js';
+import contactRoutes from './routes/contact.routes.js';
+import campaignRoutes from './routes/campaign.routes.js';
+import templateRoutes from './routes/template.routes.js';
+import segmentRoutes from './routes/segment.routes.js';
+
 // ---------------------------------------------------------------------------
 // Health endpoint (public)
 // ---------------------------------------------------------------------------
+
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/contacts', contactRoutes);
+app.use('/api/v1/campaigns', campaignRoutes);
+app.use('/api/v1/templates', templateRoutes);
+app.use('/api/v1/segments', segmentRoutes);
 
 app.get('/api/v1/health', async (_req, res) => {
   const dbConnected = await checkDatabaseConnection();
@@ -62,19 +74,33 @@ app.get('/api/v1/health', async (_req, res) => {
 // ---------------------------------------------------------------------------
 
 // eslint-disable-next-line no-unused-vars
-app.use((err, _req, res, _next) => {
-  const status = err.status || 500;
-  const message =
-    config.nodeEnv === 'production'
-      ? 'Internal server error'
-      : err.message || 'Internal server error';
+app.use((err, req, res, _next) => {
+  let status = err.status || 500;
+  let code = err.code || 'INTERNAL_ERROR';
+  let message = err.message || 'Internal server error';
 
-  console.error(`[error] ${err.message}`);
+  if (err.name === 'ZodError') {
+    status = 400;
+    code = 'VALIDATION_ERROR';
+    message = 'Invalid request data';
+  } else if (status < 500) {
+    message = err.message || 'Client error';
+  } else {
+    message = 'Internal server error';
+  }
+
+  // Sanitize logging to prevent secret leakage
+  // We log the error name, status, and path. We explicitly do NOT log err.message or stack.
+  const errorCategory = status < 500 ? 'ClientError' : 'ServerError';
+  const errorName = err.name || 'Error';
+  const path = req.originalUrl || req.path || 'unknown path';
+  
+  console.error(`[${errorCategory}] Name: ${errorName} | Status: ${status} | Path: ${path}`);
 
   res.status(status).json({
     success: false,
     error: {
-      code: err.code || 'INTERNAL_ERROR',
+      code,
       message,
     },
   });

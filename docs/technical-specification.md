@@ -524,6 +524,31 @@ The backend must independently validate the campaign and its eligible recipients
 
 Prevent repeated clicks or duplicate API requests from accidentally starting multiple concurrent executions of the same campaign.
 
+### 10.5 Campaign Templates
+
+Reusable email templates are supported as a content starting point for campaigns.
+
+- Templates store a name, subject, HTML content, and plain-text content.
+- Templates support full CRUD operations behind authenticated endpoints.
+- A "Load from Template" action in the campaign editor copies the template's subject, HTML, and text content into the draft.
+- Loading a template does not create a live dependency. The campaign stores its own copy of the content and is unaffected by later template edits or deletions.
+- Plain-text content is auto-generated from HTML via `html-to-text` when not explicitly provided.
+- HTML previews use a sandboxed `<iframe>` (`sandbox=""`) to prevent script execution and XSS.
+
+### 10.6 Contact Segments
+
+Reusable contact filter groups (segments) are supported for batch recipient selection.
+
+- Segments store a name, optional description, and an array of validated filter rules.
+- Each filter rule specifies a whitelisted field (`email`, `name`, `status`, `isSubscribed`, `source`), a whitelisted operator (`equals`, `notEquals`, `contains`, `startsWith`, `endsWith`), and a value.
+- The backend translates validated filter rules into Prisma queries. Arbitrary MongoDB queries from the frontend are never accepted.
+- A preview endpoint returns the count of eligible contacts matching a segment's filters before any recipients are created.
+- An "Add from Segment" action in the campaign Recipients tab resolves matching contacts into `CampaignRecipient` records.
+- Segment resolution always enforces contact eligibility: only `ACTIVE`, subscribed, non-archived, and non-deleted contacts are included.
+- Duplicate recipients are prevented by the `@@unique([campaignId, emailAtSend])` constraint and existing-recipient exclusion queries.
+- Recipient addition from segments is bounded to a maximum of 500 contacts per operation. If the matching set exceeds this limit, a clear indication is returned.
+- Recipients can only be added to campaigns in `DRAFT` status. Modifications are blocked after sending begins.
+
 ---
 
 ## 11. Email Delivery Architecture

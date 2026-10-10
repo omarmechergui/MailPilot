@@ -20,6 +20,7 @@ const envSchema = z.object({
   SMTP_USER: z.string().optional().default(''),
   SMTP_PASS: z.string().optional().default(''),
   SMTP_FROM: z.string().email().default('mailpilot@localhost'),
+  ADMIN_INIT_TOKEN: z.string().min(16),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -46,6 +47,7 @@ const config = {
     pass: env.SMTP_PASS,
     from: env.SMTP_FROM,
   },
+  adminInitToken: env.ADMIN_INIT_TOKEN,
 };
 
 export default config;

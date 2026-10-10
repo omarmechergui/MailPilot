@@ -10,3 +10,120 @@ datasource db {
   provider = "mongodb"
   url      = env("DATABASE_URL")
 }
+
+model Admin {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  email     String   @unique
+  username  String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum ContactStatus {
+  ACTIVE
+  INVALID
+  BLOCKED
+}
+
+model Contact {
+  id              String        @id @default(auto()) @map("_id") @db.ObjectId
+  email           String
+  emailNormalized String        @unique
+  name            String?
+  status          ContactStatus @default(ACTIVE)
+  isSubscribed    Boolean       @default(true)
+  archivedAt      DateTime?
+  deletedAt       DateTime?
+  unsubscribedAt  DateTime?
+  source          String        @default("MANUAL")
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([status])
+  @@index([isSubscribed])
+  @@index([archivedAt])
+}
+
+enum CampaignStatus {
+  DRAFT
+  SENDING
+  COMPLETED
+  COMPLETED_WITH_FAILURES
+  FAILED
+}
+
+model Campaign {
+  id              String             @id @default(auto()) @map("_id") @db.ObjectId
+  name            String
+  subject         String
+  htmlContent     String?
+  textContent     String?
+  status          CampaignStatus     @default(DRAFT)
+  totalRecipients Int                @default(0)
+  sentCount       Int                @default(0)
+  failedCount     Int                @default(0)
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  segmentId       String?            @db.ObjectId
+  templateId      String?            @db.ObjectId
+
+  recipients      CampaignRecipient[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum RecipientStatus {
+  PENDING
+  SENDING
+  ACCEPTED
+  FAILED
+  SKIPPED
+  UNKNOWN
+}
+
+model CampaignRecipient {
+  id               String          @id @default(auto()) @map("_id") @db.ObjectId
+  campaignId       String          @db.ObjectId
+  contactId        String?         @db.ObjectId
+  emailAtSend      String
+  nameAtSend       String?
+  status           RecipientStatus @default(PENDING)
+  attemptCount     Int             @default(0)
+  maxAttempts      Int             @default(3)
+  lastAttemptAt    DateTime?
+  acceptedAt       DateTime?
+  failedAt         DateTime?
+  lastErrorCode    String?
+  lastErrorMessage String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  campaign         Campaign        @relation(fields: [campaignId], references: [id])
+
+  @@unique([campaignId, emailAtSend])
+  @@index([campaignId, status])
+  @@index([campaignId])
+}
+
+model Template {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  subject     String
+  htmlContent String?
+  textContent String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Segment {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  description String?
+  filters     Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
